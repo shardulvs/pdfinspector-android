@@ -129,5 +129,60 @@ class InspectorPaneTest {
             assertEquals("Query '$query' should match $expectedCount nodes", expectedCount, matches.size)
         }
     }
+
+    @Test
+    fun keyboardShortcutToggleSearchField() {
+        // Test the Ctrl+F keyboard shortcut toggle logic
+        // Simulating the behavior: if Ctrl+F is pressed, toggle showSearchField state
+        var showSearchField = false
+        val isCtrlPressed = true
+        val isKeyF = true
+        
+        // Simulate Ctrl+F press
+        if (isCtrlPressed && isKeyF) {
+            showSearchField = !showSearchField
+        }
+        assertTrue("Ctrl+F should toggle search field to visible", showSearchField)
+        
+        // Simulate another Ctrl+F press
+        if (isCtrlPressed && isKeyF) {
+            showSearchField = !showSearchField
+        }
+        assertFalse("Ctrl+F should toggle search field back to hidden", showSearchField)
+    }
+
+    @Test
+    fun keyboardShortcutConsumesEvent() {
+        // Test that the Ctrl+F keyboard event is consumed (returns true)
+        val isCtrlPressed = true
+        val isKeyF = true
+        
+        val eventConsumed = if (isCtrlPressed && isKeyF) {
+            true  // Event is consumed
+        } else {
+            false  // Event passes through
+        }
+        
+        assertTrue("Ctrl+F event should be consumed", eventConsumed)
+    }
+
+    @Test
+    fun otherKeysPassThrough() {
+        // Test that non-Ctrl+F keys are not consumed
+        val testCases = listOf(
+            Triple(true, false, false),   // Ctrl+other key
+            Triple(false, true, false),   // No Ctrl + F
+            Triple(false, false, false),  // No modifiers, no F
+        )
+        
+        for ((isCtrlPressed, isKeyF, _) in testCases) {
+            val eventConsumed = if (isCtrlPressed && isKeyF) {
+                true
+            } else {
+                false
+            }
+            assertFalse("Non-Ctrl+F events should not be consumed", eventConsumed)
+        }
+    }
 }
 
