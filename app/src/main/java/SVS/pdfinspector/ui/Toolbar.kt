@@ -20,6 +20,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -45,6 +46,7 @@ import compose.icons.tablericons.ChevronRight
 import compose.icons.tablericons.Copy
 import compose.icons.tablericons.DeviceFloppy
 import compose.icons.tablericons.Folder
+import compose.icons.tablericons.LayoutSidebarRight
 import compose.icons.tablericons.Maximize
 import compose.icons.tablericons.Minimize
 import compose.icons.tablericons.Settings
@@ -58,11 +60,13 @@ fun InspectorToolbar(
     dirty: Boolean,
     canUndo: Boolean,
     canRedo: Boolean,
+    showInspector: Boolean,
     copyText: String?,
     onCopyText: () -> Unit,
     onFitWidth: () -> Unit,
     onFitHeight: () -> Unit,
     onToggleFullscreen: () -> Unit,
+    onToggleInspector: () -> Unit,
     onPrev: () -> Unit,
     onNext: () -> Unit,
     onJumpToPage: (Int) -> Unit,
@@ -203,6 +207,9 @@ fun InspectorToolbar(
                 }
 
                 ToolDivider()
+                IconToggleButton(checked = showInspector, onCheckedChange = { onToggleInspector() }) {
+                    Icon(TablerIcons.LayoutSidebarRight, "Toggle inspector pane", Modifier.size(20.dp))
+                }
                 IconButton(onClick = onToggleFullscreen) {
                     Icon(
                         imageVector = if (fullscreen) TablerIcons.Minimize else TablerIcons.Maximize,

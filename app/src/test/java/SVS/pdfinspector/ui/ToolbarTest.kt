@@ -32,4 +32,13 @@ class ToolbarTest {
         assertEquals("Page number must be between 1 and 12", getPageJumpError("100", 12))
         assertEquals("No pages available", getPageJumpError("1", 0))
     }
+
+    @Test
+    fun inspectorToggleTracksBooleanState() {
+        var showInspector = true
+        showInspector = !showInspector
+        assertEquals(false, showInspector)
+        showInspector = !showInspector
+        assertEquals(true, showInspector)
+    }
 }

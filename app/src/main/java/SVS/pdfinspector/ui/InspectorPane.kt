@@ -34,6 +34,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -78,7 +84,16 @@ fun InspectorPane(
 ) {
     var searchQuery by rememberSaveable { mutableStateOf("") }
     var showSearchField by rememberSaveable { mutableStateOf(false) }
-    Column(modifier.fillMaxWidth()) {
+    Column(modifier
+        .fillMaxWidth()
+        .onKeyEvent { keyEvent ->
+            if (keyEvent.type == KeyEventType.KeyDown && keyEvent.isCtrlPressed && keyEvent.key == Key.F) {
+                showSearchField = !showSearchField
+                true
+            } else {
+                false
+            }
+        }) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()

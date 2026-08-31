@@ -137,6 +137,7 @@ fun InspectorScreen(
     val view = LocalView.current
     val state = viewModel.state
     var showSettings by remember { mutableStateOf(false) }
+    var showInspector by remember { mutableStateOf(true) }
 
     LaunchedEffect(initialUri) {
         if (initialUri != null) viewModel.open(context, initialUri)
@@ -206,11 +207,13 @@ fun InspectorScreen(
                         dirty = state.dirty,
                         canUndo = state.canUndo,
                         canRedo = state.canRedo,
+                        showInspector = showInspector,
                         copyText = copyText,
                         onCopyText = { viewModel.copySelectedText(context) },
                         onFitWidth = { fitMode = FitMode.WIDTH },
                         onFitHeight = { fitMode = FitMode.HEIGHT },
                         onToggleFullscreen = { fullscreen = !fullscreen },
+                        onToggleInspector = { showInspector = !showInspector },
                         onPrev = { viewModel.showPage(state.pageIndex - 1) },
                         onNext = { viewModel.showPage(state.pageIndex + 1) },
                         onJumpToPage = { index -> viewModel.showPage(index) },
@@ -241,6 +244,7 @@ fun InspectorScreen(
                             transparent = !transparent
                             fitMode = FitMode.NONE
                         },
+                        showInspector = showInspector,
                     )
                 }
             }
@@ -298,6 +302,7 @@ private fun Workspace(
     onUserTransform: () -> Unit,
     onToggleDock: () -> Unit,
     onToggleTransparent: () -> Unit,
+    showInspector: Boolean,
 ) {
     val page = state.page ?: return
     val transform = state.pageTransform
@@ -440,15 +445,17 @@ private fun Workspace(
     if (transparent) {
         Box(Modifier.fillMaxSize()) {
             canvas(Modifier.fillMaxSize())
-            InspectorDock(
-                dock = dock,
-                transparent = true,
-                sizeDp = sizeDp,
-                onResizePx = onResize,
-                modifier = Modifier
-                    .align(if (dock == Dock.SIDE) Alignment.CenterEnd else Alignment.BottomCenter)
-                    .then(if (dock == Dock.SIDE) Modifier.fillMaxHeight() else Modifier.fillMaxWidth()),
-            ) { pane() }
+            if (showInspector) {
+                InspectorDock(
+                    dock = dock,
+                    transparent = true,
+                    sizeDp = sizeDp,
+                    onResizePx = onResize,
+                    modifier = Modifier
+                        .align(if (dock == Dock.SIDE) Alignment.CenterEnd else Alignment.BottomCenter)
+                        .then(if (dock == Dock.SIDE) Modifier.fillMaxHeight() else Modifier.fillMaxWidth()),
+                ) { pane() }
+            }
         }
     } else if (dock == Dock.SIDE) {
         Row(Modifier.fillMaxSize()) {
@@ -457,7 +464,9 @@ private fun Workspace(
                     .weight(1f)
                     .fillMaxHeight(),
             )
-            InspectorDock(dock, false, sizeDp, onResize, Modifier.fillMaxHeight()) { pane() }
+            if (showInspector) {
+                InspectorDock(dock, false, sizeDp, onResize, Modifier.fillMaxHeight()) { pane() }
+            }
         }
     } else {
         Column(Modifier.fillMaxSize()) {
@@ -466,7 +475,9 @@ private fun Workspace(
                     .weight(1f)
                     .fillMaxWidth(),
             )
-            InspectorDock(dock, false, sizeDp, onResize, Modifier.fillMaxWidth()) { pane() }
+            if (showInspector) {
+                InspectorDock(dock, false, sizeDp, onResize, Modifier.fillMaxWidth()) { pane() }
+            }
         }
     }
 }
