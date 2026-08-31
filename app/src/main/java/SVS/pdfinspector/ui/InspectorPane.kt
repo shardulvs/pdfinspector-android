@@ -21,10 +21,15 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.IconToggleButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,6 +43,7 @@ import compose.icons.tablericons.Droplet
 import compose.icons.tablericons.Edit
 import compose.icons.tablericons.LayoutBottombar
 import compose.icons.tablericons.LayoutSidebarRight
+import compose.icons.tablericons.Search
 import compose.icons.tablericons.Trash
 import SVS.pdfinspector.engine.DrawNode
 import SVS.pdfinspector.engine.NodeKind
@@ -70,6 +76,8 @@ fun InspectorPane(
     onEdit: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var showSearchField by rememberSaveable { mutableStateOf(false) }
     Column(modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
@@ -97,6 +105,9 @@ fun InspectorPane(
             IconToggleButton(checked = showRaw, onCheckedChange = { onToggleRaw() }) {
                 Icon(TablerIcons.Code, "Toggle raw operators", Modifier.size(20.dp))
             }
+            IconToggleButton(checked = showSearchField, onCheckedChange = { showSearchField = it }) {
+                Icon(TablerIcons.Search, "Toggle search", Modifier.size(20.dp))
+            }
             IconButton(onClick = onToggleDock) {
                 Icon(
                     imageVector = if (dock == Dock.BOTTOM) TablerIcons.LayoutSidebarRight else TablerIcons.LayoutBottombar,
@@ -119,8 +130,22 @@ fun InspectorPane(
             }
         }
         HorizontalDivider()
+        if (showSearchField) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                singleLine = true,
+                placeholder = { Text("Search elements") },
+            )
+            HorizontalDivider()
+        }
 
-        val rows = remember(page, expanded) { flatten(page.root, expanded) }
+        val rows = remember(page, expanded, searchQuery, showSearchField) { 
+            flatten(page.root, expanded, if (showSearchField) searchQuery else "") 
+        }
         val listState = rememberLazyListState()
         LaunchedEffect(revealTick) {
             if (selectedId != null) {
@@ -128,7 +153,9 @@ fun InspectorPane(
                 if (index >= 0) listState.animateScrollToItem(index)
             }
         }
-        LazyColumn(state = listState, modifier = Modifier.fillMaxWidth()) {
+        LazyColumn(state = listState, modifier = Modifier
+            .fillMaxWidth()
+            .weight(1f)) {
             items(rows, key = { it.node.id }) { row ->
                 val swatch = swatchColors[row.node.id] ?: row.node.colorArgb
                 TreeRowItem(row, row.node.id == selectedId, showRaw, swatch, onSelect, onToggleExpand, onEdit)
@@ -137,12 +164,30 @@ fun InspectorPane(
     }
 }
 
-private fun flatten(root: DrawNode, expanded: Set<Int>): List<TreeRow> {
+private fun flatten(root: DrawNode, expanded: Set<Int>, query: String = ""): List<TreeRow> {
     val out = ArrayList<TreeRow>()
+    val normalizedQuery = query.trim()
+
+    fun matchesQuery(node: DrawNode): Boolean {
+        if (normalizedQuery.isEmpty()) return true
+        return listOfNotNull(node.label, node.detail, node.raw, node.text)
+            .any { it.contains(normalizedQuery, ignoreCase = true) }
+    }
+
+    fun hasMatchingDescendant(node: DrawNode): Boolean {
+        if (node.children.isEmpty()) return matchesQuery(node)
+        return node.children.any { matchesQuery(it) || hasMatchingDescendant(it) }
+    }
+
     fun walk(node: DrawNode, depth: Int) {
         for (child in node.children) {
             val hasChildren = child.children.isNotEmpty()
-            val isOpen = child.id in expanded
+            val childMatches = matchesQuery(child)
+            val descendantMatches = hasMatchingDescendant(child)
+            val visible = normalizedQuery.isEmpty() || childMatches || descendantMatches
+            if (!visible) continue
+
+            val isOpen = child.id in expanded || (normalizedQuery.isNotEmpty() && descendantMatches)
             out.add(TreeRow(child, depth, hasChildren, isOpen))
             if (hasChildren && isOpen) walk(child, depth + 1)
         }
