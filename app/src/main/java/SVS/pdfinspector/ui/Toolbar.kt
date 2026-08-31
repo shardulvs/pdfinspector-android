@@ -1,5 +1,6 @@
 package SVS.pdfinspector.ui
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,15 +14,19 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.VerticalDivider
+import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -60,6 +65,7 @@ fun InspectorToolbar(
     onToggleFullscreen: () -> Unit,
     onPrev: () -> Unit,
     onNext: () -> Unit,
+    onJumpToPage: (Int) -> Unit,
     onUndo: () -> Unit,
     onRedo: () -> Unit,
     onOpen: () -> Unit,
@@ -67,6 +73,60 @@ fun InspectorToolbar(
     onSettings: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    var pageJumpOpen by remember { mutableStateOf(false) }
+    var pageJumpInput by remember(pageIndex, pageCount) { mutableStateOf((pageIndex + 1).toString()) }
+    var pageJumpError by remember { mutableStateOf("") }
+    val pageLabel = pageLabel(pageIndex, pageCount)
+
+    if (pageJumpOpen) {
+        AlertDialog(
+            onDismissRequest = { pageJumpOpen = false },
+            title = { Text("Go to page") },
+            text = {
+                Column {
+                    OutlinedTextField(
+                        value = pageJumpInput,
+                        onValueChange = { 
+                            pageJumpInput = it.filter(Char::isDigit)
+                            pageJumpError = ""
+                        },
+                        singleLine = true,
+                        label = { Text("Page number") },
+                        placeholder = { Text("1") },
+                        isError = pageJumpError.isNotEmpty(),
+                    )
+                    if (pageJumpError.isNotEmpty()) {
+                        Text(
+                            text = pageJumpError,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(top = 8.dp, start = 16.dp),
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val target = pageJumpTarget(pageJumpInput, pageCount)
+                        if (target != null) {
+                            onJumpToPage(target)
+                            pageJumpOpen = false
+                            pageJumpError = ""
+                        } else {
+                            pageJumpError = getPageJumpError(pageJumpInput, pageCount)
+                        }
+                    },
+                ) {
+                    Text("Go")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pageJumpOpen = false }) { Text("Cancel") }
+            },
+        )
+    }
+
     Surface(
         modifier = modifier.fillMaxWidth(),
         color = MaterialTheme.colorScheme.surfaceContainer,
@@ -120,7 +180,16 @@ fun InspectorToolbar(
                 IconButton(onClick = onPrev, enabled = pageIndex > 0) {
                     Icon(TablerIcons.ChevronLeft, "Previous page", Modifier.size(20.dp))
                 }
-                Text("${pageIndex + 1} / $pageCount", style = MaterialTheme.typography.labelLarge)
+                Text(
+                    text = pageLabel,
+                    style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.clickable { 
+                        if (pageCount > 0) {
+                            pageJumpInput = (pageIndex + 1).toString()
+                            pageJumpOpen = true
+                        }
+                    },
+                )
                 IconButton(onClick = onNext, enabled = pageIndex < pageCount - 1) {
                     Icon(TablerIcons.ChevronRight, "Next page", Modifier.size(20.dp))
                 }
@@ -150,6 +219,28 @@ fun InspectorToolbar(
             }
         }
     }
+}
+
+fun pageLabel(pageIndex: Int, pageCount: Int): String =
+    if (pageCount > 0) "${pageIndex + 1} / $pageCount" else "0 / 0"
+
+fun pageJumpTarget(rawInput: String, pageCount: Int): Int? {
+    if (pageCount <= 0) return null
+    if (!rawInput.matches(Regex("\\d+"))) return null
+    val pageNumber = rawInput.toIntOrNull() ?: return null
+    if (pageNumber <= 0) return null
+    val target = pageNumber - 1
+    return target.takeIf { it in 0 until pageCount }
+}
+
+fun getPageJumpError(rawInput: String, pageCount: Int): String {
+    if (pageCount <= 0) return "No pages available"
+    if (rawInput.isEmpty()) return "Page number is required"
+    if (!rawInput.matches(Regex("\\d+"))) return "Page number must contain only digits"
+    val pageNumber = rawInput.toIntOrNull() ?: return "Invalid page number"
+    if (pageNumber <= 0) return "Page number must be greater than 0"
+    if (pageNumber > pageCount) return "Page number must be between 1 and $pageCount"
+    return "Invalid page number"
 }
 
 @Composable

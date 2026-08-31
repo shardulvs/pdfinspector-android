@@ -213,6 +213,7 @@ fun InspectorScreen(
                         onToggleFullscreen = { fullscreen = !fullscreen },
                         onPrev = { viewModel.showPage(state.pageIndex - 1) },
                         onNext = { viewModel.showPage(state.pageIndex + 1) },
+                        onJumpToPage = { index -> viewModel.showPage(index) },
                         onUndo = { viewModel.undo() },
                         onRedo = { viewModel.redo() },
                         onOpen = { pickPdf() },
